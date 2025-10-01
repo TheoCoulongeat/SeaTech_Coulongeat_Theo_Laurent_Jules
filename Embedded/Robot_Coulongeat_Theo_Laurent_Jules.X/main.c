@@ -30,9 +30,11 @@ int main (void){
     LED_VERTE_2 = 1;
     
     InitTimer1();
-    InitTimer23();
+    //InitTimer23();
     InitPWM();
-    PWMSetSpeed(0);
+    //PWMSetSpeed(0, 0);
+    PWMSetSpeedConsigne(0, MOTEUR_GAUCHE);
+    PWMSetSpeedConsigne(0, MOTEUR_DROIT);
 
     /***********************************************************************************************/
     //Boucle Principale
