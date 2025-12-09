@@ -24,7 +24,7 @@ void InitTimer1(void) {
     IFS0bits.T1IF = 0; // Clear Timer Interrupt Flag
     IEC0bits.T1IE = 1; // Enable Timer interrupt
     T1CONbits.TON = 1; // Enable Timer
-    SetFreqTimer1(50);
+    SetFreqTimer1(1000); //Hz
 }
 //Interruption du timer 1
 
@@ -61,15 +61,15 @@ unsigned char toggle = 0;
 void __attribute__((interrupt, no_auto_psv)) _T3Interrupt(void) {
     IFS0bits.T3IF = 0; // Clear Timer3 Interrupt Flag
     // LED_ORANGE_1 = !LED_ORANGE_1;
-    if (toggle == 0) {
-        PWMSetSpeedConsigne(20, MOTEUR_DROIT);
-        PWMSetSpeedConsigne(20, MOTEUR_GAUCHE);
-        toggle = 1;
-    } else {
-        PWMSetSpeedConsigne(-20, MOTEUR_DROIT);
-        PWMSetSpeedConsigne(-20, MOTEUR_GAUCHE);
-        toggle = 0;
-    }
+//    if (toggle == 0) {
+//        PWMSetSpeedConsigne(20, MOTEUR_DROIT);
+//        PWMSetSpeedConsigne(20, MOTEUR_GAUCHE);
+//        toggle = 1;
+//    } else {
+//        PWMSetSpeedConsigne(-20, MOTEUR_DROIT);
+//        PWMSetSpeedConsigne(-20, MOTEUR_GAUCHE);
+//        toggle = 0;
+//    }
 }
 
 void InitTimer4(void){
@@ -83,6 +83,7 @@ void InitTimer4(void){
 
 void __attribute__((interrupt, no_auto_psv)) _T4Interrupt(void){
     IFS1bits.T4IF = 0;
+    timestamp += 1;
     OperatingSystemLoop();
 }
 
