@@ -12,6 +12,7 @@
 #define LED_ORANGE_2 _LATK15
 #define LED_ROUGE_2 _LATA10
 #define LED_VERTE_2 _LATH3
+#define EN_PWM PTCONbits.PTEN
 
 #define BOUTON_1 _RH1
 

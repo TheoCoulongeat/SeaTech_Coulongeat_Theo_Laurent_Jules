@@ -1,80 +1,97 @@
 #include <xc.h>
 #include "adc.h"
-#include"ChipConfig.h"
+#include "Robot.h"
+#include "main.h"  // Pour OperatingSystemLoop
+#include "PWM.h"   // Pour PWMUpdateSpeed
 
 unsigned char ADCResultIndex = 0;
 static unsigned int ADCResult[5];
 unsigned char ADCConversionFinishedFlag;
-/****************************************************************************************************/
-// Configuration ADC
 
-/****************************************************************************************************/
 void InitADC1(void) {
-    //cf. ADC Reference Manual page 47
-    //Configuration en mode 12 bits mono canal ADC avec conversions successives sur 4 éentres
-    /************************************************************/
-    //AD1CON1
-    /************************************************************/
-    AD1CON1bits.ADON = 0; // ADC module OFF - pendant la config
-    AD1CON1bits.AD12B = 1; // 0 : 10bits - 1 : 12bits
-    AD1CON1bits.FORM = 0b00; // 00 = Integer (DOUT = 0000 dddd dddd dddd)
-    AD1CON1bits.ASAM = 0; // 0 = Sampling begins when SAMP bit is set
-    AD1CON1bits.SSRC = 0b111; // 111 = Internal counter ends sampling and starts conversion (auto-convert)
-    /************************************************************/
-    //AD1CON2
-    /************************************************************/
-    AD1CON2bits.VCFG = 0b000; // 000 : Voltage Reference = AVDD AVss
-    AD1CON2bits.CSCNA = 1; // 1 : Enable Channel Scanning
-    AD1CON2bits.CHPS = 0b00; // Converts CH0 only
-    AD1CON2bits.SMPI = 4; // 2+1 conversions successives avant interrupt
+    // --- Configuration d'origine (Premier ADC.c) ---
+    AD1CON1bits.ADON = 0; 
+    AD1CON1bits.AD12B = 1; 
+    AD1CON1bits.FORM = 0b00; 
+    AD1CON1bits.ASAM = 0; 
+    AD1CON1bits.SSRC = 0b111; 
+
+    AD1CON2bits.VCFG = 0b000; 
+    AD1CON2bits.CSCNA = 1; 
+    AD1CON2bits.CHPS = 0b00; 
+    AD1CON2bits.SMPI = 4; 
     AD1CON2bits.ALTS = 0;
     AD1CON2bits.BUFM = 0;
-    /************************************************************/
-    //AD1CON3
-    /************************************************************/
-    AD1CON3bits.ADRC = 0; // ADC Clock is derived from Systems Clock
-    AD1CON3bits.ADCS = 15; // ADC Conversion Clock TAD = TCY * (ADCS + 1)
-    AD1CON3bits.SAMC = 15; // Auto Sample Time
-    /************************************************************/
-    //AD1CON4
-    /************************************************************/
-    AD1CON4bits.ADDMAEN = 0; // DMA is not used
-    /************************************************************/
-    //Configuration des ports
-    /************************************************************/
-    //ADC éutiliss : 8(B8)-9(B9)-10(B10)
-    ANSELBbits.ANSB0 = 1;
+
+    AD1CON3bits.ADRC = 0; 
+    AD1CON3bits.ADCS = 15; // Valeur d'origine
+    AD1CON3bits.SAMC = 15; // Valeur d'origine
+    AD1CON4bits.ADDMAEN = 0; 
+
+    // --- Configuration des Pins (Valeurs d'origine) ---
+    // Utilisation de ANSB0 au lieu de ANSA0 qui faisait planter
+    ANSELBbits.ANSB0 = 1; 
     ANSELBbits.ANSB8 = 1;
     ANSELBbits.ANSB9 = 1;
     ANSELBbits.ANSB10 = 1;
     ANSELBbits.ANSB11 = 1;
 
-    AD1CSSLbits.CSS0 = 1;
-    AD1CSSLbits.CSS8 = 1; // Enable AN8 for scan
-    AD1CSSLbits.CSS9 = 1; // Enable AN9 for scan
-    AD1CSSLbits.CSS10 = 1; // Enable AN10 for scan
-    AD1CSSLbits.CSS11 = 1;
-    /* Assign MUXA inputs */
-    AD1CHS0bits.CH0SA = 0; // CH0SA bits ignored for CH0 +ve input selection
-    AD1CHS0bits.CH0NA = 0; // Select VREF- for CH0 -ve inpu
-    IFS0bits.AD1IF = 0; // Clear the A/D interrupt flag bit
-    IEC0bits.AD1IE = 1; // Enable A/D interrupt
-    AD1CON1bits.ADON = 1; // Turn on the A/D converter
+    // --- Scan des canaux ---
+    AD1CSSLbits.CSS0 = 1;  // Scan AN0 (Extreme Gauche)
+    AD1CSSLbits.CSS8 = 1;  // Scan AN8 (Gauche)
+    AD1CSSLbits.CSS9 = 1;  // Scan AN9 (Centre)
+    AD1CSSLbits.CSS10 = 1; // Scan AN10 (Droit)
+    AD1CSSLbits.CSS11 = 1; // Scan AN11 (Extreme Droite)
+
+    IFS0bits.AD1IF = 0; 
+    IEC0bits.AD1IE = 1; 
+    AD1CON1bits.ADON = 1; 
 }
 
-/* This is ADC interrupt routine */
 void __attribute__((interrupt, no_auto_psv)) _AD1Interrupt(void) {
     IFS0bits.AD1IF = 0;
-    ADCResult[0] = ADC1BUF0; // Read the AN-scan input 1 conversion result
-    ADCResult[1] = ADC1BUF1; // Read the AN3 conversion result
-    ADCResult[2] = ADC1BUF2; // Read the AN5 conversion result
-    ADCResult[3] = ADC1BUF3; 
-    ADCResult[4] = ADC1BUF4; 
+
+    // --- Lecture des Buffers ---
+    // L'ADC range toujours du plus petit canal (AN0) au plus grand (AN11)
+    unsigned int val_ext_gauche = ADC1BUF0; // AN0
+    unsigned int val_gauche     = ADC1BUF1; // AN8
+    unsigned int val_centre     = ADC1BUF2; // AN9
+    unsigned int val_droit      = ADC1BUF3; // AN10
+    unsigned int val_ext_droite = ADC1BUF4; // AN11
+
+    // --- Conversion des distances ---
+    
+    // Extreme Gauche (AN0)
+    if(val_ext_gauche > 100) robotState.distanceTelemetreExtremeGauche = (42200.0 / val_ext_gauche) - 5;
+    else robotState.distanceTelemetreExtremeGauche = 80.0;
+    
+    // Gauche (AN8)
+    if(val_gauche > 100) robotState.distanceTelemetreGauche = (42200.0 / val_gauche) - 5;
+    else robotState.distanceTelemetreGauche = 80.0;
+
+    // Centre (AN9)
+    if(val_centre > 100) robotState.distanceTelemetreCentre = (42200.0 / val_centre) - 5;
+    else robotState.distanceTelemetreCentre = 80.0; 
+
+    // Droit (AN10)
+    // CORRECTION ICI : val_droit au lieu de raw_droit
+    if(val_droit > 100) robotState.distanceTelemetreDroit = (42200.0 / val_droit) - 5;
+    else robotState.distanceTelemetreDroit = 80.0;
+    
+    // Extreme Droite (AN11)
+    if(val_ext_droite > 100) robotState.distanceTelemetreExtremeDroite = (42200.0 / val_ext_droite) - 5;
+    else robotState.distanceTelemetreExtremeDroite = 80.0;
+
     ADCConversionFinishedFlag = 1;
+
+    // --- Lancement du Cerveau et des Moteurs ---
+    // Si on enlève ça, le robot ne bouge pas
+    OperatingSystemLoop();
+    PWMUpdateSpeed();
 }
 
 void ADC1StartConversionSequence() {
-    AD1CON1bits.SAMP = 1; //Lance une acquisition ADC
+    AD1CON1bits.SAMP = 1; 
 }
 
 unsigned int * ADCGetResult(void) {
@@ -88,15 +105,3 @@ unsigned char ADCIsConversionFinished(void) {
 void ADCClearConversionFinishedFlag(void) {
     ADCConversionFinishedFlag = 0;
 }
-
-/*
- Le code configure le module ADC1 d?un microcontrôleur en mode 12 bits avec conversion 
- sur un seul canal (CH0), en activant le balayage de plusieurs voies d'entrée. 
- Trois voies analogiques sont utilisées : AN8, AN9 et AN10, qui correspondent aux 
- broches RB8, RB9 et RB10. Le balayage est activé via CSANA = 1 et les voies sont 
- sélectionnées dans AD1CSSL. Le convertisseur fonctionne avec une horloge dérivée de 
- l?horloge système, un temps d?échantillonnage automatique et un déclenchement automatique 
- des conversions. L?interruption est activée pour signaler la fin de la séquence de conversion. 
- Pour câbler les entrées analogiques sur la carte, il faut utiliser les broches des pins RB8, 
- RB9 et RB10.
- */

@@ -1,5 +1,9 @@
-build/default/production/ADC.o: ADC.c adc.h ChipConfig.h
+build/default/production/ADC.o: ADC.c adc.h Robot.h main.h PWM.h
 
 adc.h:
 
-ChipConfig.h:
+Robot.h:
+
+main.h:
+
+PWM.h:
