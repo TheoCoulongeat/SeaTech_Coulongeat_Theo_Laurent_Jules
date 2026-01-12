@@ -25,6 +25,7 @@ unsigned char robot_is_running = 0;
 
 unsigned char vitesse_avance;
 LogicFunction_t pfn_SetNextRobotState = NULL;
+unsigned char vitesse_avance_tourne;
 
 unsigned char finishing_turn = 0; 
 unsigned char nextStateRobot = 0; // Déclaration globale pour l'usage dans SetNextRobotState
@@ -79,11 +80,12 @@ int main(void) {
             stateRobot = STATE_AVANCE;
             LED_ROUGE_2 = 1;               
             vitesse_avance = 30;
+            vitesse_avance_tourne = 16;
             pfn_SetNextRobotState = &SetNextRobotStateInAutomaticMode;
             
-            DIST_OBSTACLE_DETECTE = 45.0;
-            DIST_OBSTACLE_DETECTE1 = 28.0;
-            DIST_OBSTACLE_DETECTE2 = 22.0;
+            DIST_OBSTACLE_DETECTE = 44.25;
+            DIST_OBSTACLE_DETECTE1 = 29;
+            DIST_OBSTACLE_DETECTE2 = 23.75;
         }
         // MODE 2 : LABYRINTHE (Bouton RH2)
         else if (_RH2 == 1) { 
@@ -92,12 +94,13 @@ int main(void) {
             EN_PWM = 1;                    
             stateRobot = STATE_AVANCE;
             LED_VERTE_2 = 1;
-            vitesse_avance = 30; 
+            vitesse_avance = 30;
+            vitesse_avance_tourne = 16;
             pfn_SetNextRobotState = &SetNextRobotStateInAutomaticMode;
             
-            DIST_OBSTACLE_DETECTE = 35.0;
-            DIST_OBSTACLE_DETECTE1 = 24.0;
-            DIST_OBSTACLE_DETECTE2 = 20.0;
+            DIST_OBSTACLE_DETECTE = 33.5;
+            DIST_OBSTACLE_DETECTE1 = 22.0;
+            DIST_OBSTACLE_DETECTE2 = 17.0;
         }      
     }
     
@@ -157,7 +160,7 @@ void OperatingSystemLoop(void)
 
     // --- ROTATION GAUCHE ---
     case STATE_TOURNE_GAUCHE:
-        PWMSetSpeedConsigne(19, MOTEUR_DROIT);
+        PWMSetSpeedConsigne(vitesse_avance_tourne, MOTEUR_DROIT);
         PWMSetSpeedConsigne(-1, MOTEUR_GAUCHE);
         timestamp = 0; 
         finishing_turn = 0; // Reset du flag
@@ -185,7 +188,7 @@ void OperatingSystemLoop(void)
     // --- ROTATION DROITE ---
     case STATE_TOURNE_DROITE:
         PWMSetSpeedConsigne(-1, MOTEUR_DROIT);
-        PWMSetSpeedConsigne(19, MOTEUR_GAUCHE);
+        PWMSetSpeedConsigne(vitesse_avance_tourne, MOTEUR_GAUCHE);
         timestamp = 0; 
         finishing_turn = 0;
         stateRobot = STATE_TOURNE_DROITE_EN_COURS;
@@ -209,8 +212,8 @@ void OperatingSystemLoop(void)
         break;
 
     case STATE_TOURNE_SUR_PLACE_GAUCHE:
-        PWMSetSpeedConsigne(19, MOTEUR_DROIT);
-        PWMSetSpeedConsigne(-19, MOTEUR_GAUCHE);
+        PWMSetSpeedConsigne(vitesse_avance_tourne, MOTEUR_DROIT);
+        PWMSetSpeedConsigne(-vitesse_avance_tourne, MOTEUR_GAUCHE);
         timestamp = 0; 
         finishing_turn = 0;
         stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE_EN_COURS;
@@ -224,8 +227,8 @@ void OperatingSystemLoop(void)
         break;
         
     case STATE_TOURNE_SUR_PLACE_DROITE:
-        PWMSetSpeedConsigne(-19, MOTEUR_DROIT);
-        PWMSetSpeedConsigne(19, MOTEUR_GAUCHE);
+        PWMSetSpeedConsigne(-vitesse_avance_tourne, MOTEUR_DROIT);
+        PWMSetSpeedConsigne(vitesse_avance_tourne, MOTEUR_GAUCHE);
         timestamp = 0; 
         finishing_turn = 0;
         stateRobot = STATE_TOURNE_SUR_PLACE_DROITE_EN_COURS;
