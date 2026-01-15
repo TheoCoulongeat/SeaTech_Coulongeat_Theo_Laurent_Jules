@@ -33,7 +33,8 @@ unsigned char nextStateRobot = 0; // Déclaration globale pour l'usage dans SetNe
 // --- FONCTIONS UTILITAIRES ---
 
 void StopRobotCompletely(void) {
-    PWMSetSpeedConsigne(0, MOTEUR_DROIT);
+    PWMSetSpeedConsigne(0, MOTEUR_DROIT
+            );
     PWMSetSpeedConsigne(0, MOTEUR_GAUCHE);
     EN_PWM = 0; 
     // Feedback visuel d'arrêt
